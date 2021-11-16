@@ -1,0 +1,144 @@
+// LiquidCrystal(RS, E, D4, D5, D6, D7) - LCD Pins used
+#include <LiquidCrystal.h>
+
+#define D4 2
+#define D5 3
+#define D6 4
+#define D7 7
+#define E 8
+#define RS 9
+
+LiquidCrystal LCD(RS, E, D4, D5, D6, D7);  //using libary to set LCD pins
+
+#define DistanceEchoPin 5
+#define DistanceTrigPin 6
+int threshold = 200; //value to determine light value for nightmode
+long duration; //for range finder
+int distance; //for range finder
+int light; //for light sensor
+int sensorpin = A0; //analog pin for light sensor
+int times = 0; //Used in the for loop for the blinking yellow light
+void setup(){ //declaring the pins im using
+  pinMode(DistanceTrigPin, OUTPUT);
+  pinMode(DistanceEchoPin, INPUT); 
+  pinMode(sensorpin, INPUT);
+  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(10, OUTPUT);
+  LCD.begin(16,2); 
+  Serial.begin(9600);
+  Serial.println("input 1 = Regular mode, 2 = Pedestrian mode, 3 = Night mode");
+  
+}
+void loop() 
+{
+  RegularMode();
+  digitalWrite(DistanceTrigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(DistanceTrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(DistanceTrigPin, LOW);
+  
+  Rangefinder();
+  if (distance < 10) PedestrianMode();  //check to see if distance is less than 10 then use ped function
+ 
+  lightsensor();
+}
+void Rangefinder() //range finder function
+{ 
+  duration = pulseIn(DistanceEchoPin, HIGH);
+  distance = duration * 0.034 / 2; //Calculation to work out distance in cm
+  //Code to show the distance meassured in the serial monitor
+}
+void lightsensor() //light sensor function
+{
+ light = analogRead(0);
+
+ if(light < threshold) Nightmode();
+}
+void Serialmonitor()
+{
+ if (Serial.available() > 0)  // Check to see if a number has been inputted
+  {
+    char ch = Serial.read(); //look what the user inputted and call that function
+    Serial.println(ch);
+     if(ch == '1')
+     {
+      Serial.println("Starting regular mode");
+      RegularMode();
+     }
+     else if(ch == '2')
+     {
+       Serial.println("Starting pedestrian mode");
+       PedestrianMode();
+     }
+     else  if(ch == '3')
+     {
+       Serial.println("Starting night mode");
+       Nightmode();
+     }
+     else 
+     {
+      Serial.println("Invalid input");
+     }
+  }
+}
+void RegularMode() //regular mode function
+{
+  LCD.clear();
+  LCD.print("Regular mode");
+  Serialmonitor();
+  digitalWrite(11, LOW);
+  digitalWrite(13, HIGH);
+  delay(2000); // Wait for 2000 millisecond(s)
+  digitalWrite(13, LOW);
+  digitalWrite(12, HIGH);
+  delay(1000); // Wait for 1000 millisecond(s)
+  digitalWrite(12, LOW);
+  digitalWrite(11, HIGH);
+  delay(2000); // Wait for 2000 millisecond(s)
+  digitalWrite(11, LOW);
+  digitalWrite(12, HIGH);
+  delay(1000); // Wait for 1000 millisecond(s)
+  digitalWrite(12, LOW);
+}
+void PedestrianMode() //Pedestrian mode function
+{
+  LCD.clear();
+  LCD.print("Pedestrian Mode");
+  tone(10, 900) ;
+  for (times=0; times < 10; times++)
+  {
+    digitalWrite(12, HIGH);  
+    delay(100);              // Wait for 100 millisecond(s)
+    digitalWrite(12, LOW);    
+    delay(100);              // Wait for 100 millisecond(s)
+  }
+  noTone(10) ;
+  Serialmonitor();
+}
+void Nightmode() //Night mode function
+{
+  LCD.clear();
+  LCD.print("Night Mode");
+  delay(500);
+  if (distance > 100) 
+  {
+   digitalWrite(13, HIGH);
+   digitalWrite(11, LOW);
+   delay(500); // Wait for 500 millisecond(s)
+  }
+  digitalWrite(DistanceTrigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(DistanceTrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(DistanceTrigPin, LOW);
+  Rangefinder();
+  if (distance < 100) {
+    digitalWrite(13, LOW);
+    digitalWrite(11, HIGH);
+  }
+  Serialmonitor();
+  lightsensor();
+}
